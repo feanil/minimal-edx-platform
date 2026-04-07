@@ -24,6 +24,10 @@ services:
         source: mongo-entrypoints.d
         target: /docker-entrypoint-initdb.d/
         read_only: true
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
   memcache:
     image: memcached
     ports:
