@@ -1,0 +1,9 @@
+# Meilisearch (Studio/course search). The container reads MEILI_* (see
+# compose.yml). Meilisearch derives a key's value from the master key + key UID,
+# so our settings compute MEILISEARCH_API_KEY instead of storing it.
+MEILI_MASTER_KEY=openedx-insecure-meilisearch-master-key
+MEILI_NO_ANALYTICS=true
+MEILISEARCH_API_KEY_UID=a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+# Index namespace. Must match MEILISEARCH_INDEX_PREFIX in the Open edX settings. Used by the
+# meilisearch-provision service (compose.yml) to scope the backend API key to these indexes.
+MEILISEARCH_INDEX_PREFIX=openedx_

@@ -28,6 +28,42 @@ services:
       nofile:
         soft: 65536
         hard: 65536
+  meilisearch:
+    image: getmeili/meilisearch:v1.8.4
+    env_file: meili_env_vars
+    ports:
+      - 127.0.0.1:7700:7700
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 2s
+  meilisearch-provision:
+    # One-shot, idempotent: create the backend API key with our agreed UID so the Open edX
+    # settings can derive its value as HMAC(MEILI_MASTER_KEY, MEILISEARCH_API_KEY_UID) instead
+    # of storing it. Meilisearch has no way to declare a key on boot, so we create it via the
+    # API once Meilisearch is healthy. Does nothing if the key already exists.
+    image: curlimages/curl:latest
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    env_file: meili_env_vars
+    restart: "no"
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        if curl -sf -o /dev/null -H "Authorization: Bearer $$MEILI_MASTER_KEY" \
+            "http://meilisearch:7700/keys/$$MEILISEARCH_API_KEY_UID"; then
+          echo "Meilisearch API key already exists: $$MEILISEARCH_API_KEY_UID"
+        else
+          echo "Creating Meilisearch API key: $$MEILISEARCH_API_KEY_UID"
+          curl -sf -X POST http://meilisearch:7700/keys \
+            -H "Authorization: Bearer $$MEILI_MASTER_KEY" \
+            -H "Content-Type: application/json" \
+            --data-binary "{\"uid\":\"$$MEILISEARCH_API_KEY_UID\",\"name\":\"Open edX backend\",\"actions\":[\"*\"],\"indexes\":[\"$${MEILISEARCH_INDEX_PREFIX}*\"],\"expiresAt\":null}"
+        fi
   memcache:
     image: memcached
     ports:
